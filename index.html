@@ -277,6 +277,7 @@
                 
                 <div class="controls">
                     <button class="control-btn" onclick="startPlayback()">▶️ Iniciar Reproducción</button>
+                    <button class="control-btn" onclick="pausePlayback()">⏸️ Pausar</button>
                     <button class="control-btn" onclick="stopAndReveal()">🔍 Revelar Información</button>
                     <button class="control-btn" onclick="openInSpotify()">🎵 Abrir en Spotify</button>
                     <button class="control-btn" onclick="addToTimeline()">➕ Agregar a Timeline</button>
@@ -668,45 +669,89 @@
         function displaySong() {
             if (!currentSong) return;
 
-            document.getElementById('song-title').textContent = currentSong.name;
-            document.getElementById('song-artist').textContent = currentSong.artist;
-            document.getElementById('song-year').textContent = `Año: ????`;
+            // Resetear información visual
+            songRevealed = false;
+            document.getElementById('song-title').textContent = `🎵 ${currentSong.name}`;
+            document.getElementById('song-artist').style.display = 'none';
+            document.getElementById('song-year').style.display = 'none';
+            document.getElementById('mystery-info').style.display = 'block';
             document.getElementById('song-info').style.display = 'block';
 
-            // Configurar reproductor
+            // Configurar reproductores pero no mostrarlos hasta que se presione play
+            const audioPlayer = document.getElementById('audio-player');
+            const spotifyPlayerDiv = document.getElementById('spotify-player');
+            
+            // Ocultar ambos reproductores inicialmente
+            audioPlayer.style.display = 'none';
+            spotifyPlayerDiv.style.display = 'none';
+            
+            // Preparar preview si está disponible
             if (currentSong.preview_url) {
                 audioPlayer.src = currentSong.preview_url;
+                showStatus('scan-status', '🎵 Canción cargada. ¡Presiona "Iniciar Reproducción"!', 'success');
+            } else {
+                showStatus('scan-status', '🎵 Canción cargada. Se usará reproductor de Spotify.', 'success');
+            }
+        }
+
+        // Iniciar reproducción en la página
+        function startPlayback() {
+            if (!currentSong) {
+                showStatus('scan-status', 'Primero carga una canción', 'error');
+                return;
+            }
+
+            console.log('🎵 HITSTER: Iniciando reproducción en la página...');
+
+            const spotifyPlayerDiv = document.getElementById('spotify-player');
+            const spotifyIframe = document.getElementById('spotify-iframe');
+            const audioPlayer = document.getElementById('audio-player');
+
+            // Prioridad 1: Si hay preview URL, usar reproductor HTML5
+            if (currentSong.preview_url) {
+                console.log('🎵 HITSTER: Reproduciendo preview con HTML5...');
+                audioPlayer.src = currentSong.preview_url;
                 audioPlayer.style.display = 'block';
-                showStatus('scan-status', '🎵 Canción cargada. Preview disponible!', 'success');
-            } else {
-                audioPlayer.style.display = 'none';
-                showStatus('scan-status', '⚠️ Esta canción no tiene preview. Usa "Abrir en Spotify"', 'error');
-            }
-        }
-
-        // Controles del reproductor
-        function playPreview() {
-            if (audioPlayer.src && currentSong.preview_url) {
-                audioPlayer.play().catch(e => {
-                    showStatus('scan-status', 'Error reproduciendo: ' + e.message, 'error');
+                audioPlayer.currentTime = 0;
+                
+                audioPlayer.play().then(() => {
+                    showStatus('scan-status', '🎵 Reproduciendo preview (30 segundos)', 'success');
+                    // Ocultar reproductor de Spotify si estaba visible
+                    spotifyPlayerDiv.style.display = 'none';
+                }).catch(error => {
+                    console.error('Error reproduciendo audio:', error);
+                    showStatus('scan-status', 'Error al reproducir preview. Probando Spotify embebido...', 'error');
+                    // Si falla el preview, intentar con Spotify embebido
+                    trySpotifyEmbed();
                 });
-            } else {
-                showStatus('scan-status', 'No hay preview disponible. Prueba "Abrir en Spotify"', 'error');
+                return;
             }
+
+            // Prioridad 2: Usar reproductor embebido de Spotify
+            trySpotifyEmbed();
         }
 
-        function pausePreview() {
-            if (audioPlayer.src) {
-                audioPlayer.pause();
-            }
-        }
-
-        function openInSpotify() {
-            if (currentSong && currentSong.external_url) {
-                window.open(currentSong.external_url, '_blank');
-            } else {
-                showStatus('scan-status', 'No se puede abrir en Spotify', 'error');
-            }
+        function trySpotifyEmbed() {
+            if (!currentSong) return;
+            
+            console.log('🎵 HITSTER: Intentando reproductor embebido de Spotify...');
+            
+            const spotifyPlayerDiv = document.getElementById('spotify-player');
+            const spotifyIframe = document.getElementById('spotify-iframe');
+            const audioPlayer = document.getElementById('audio-player');
+            
+            // Crear URL del embed de Spotify
+            const embedUrl = `https://open.spotify.com/embed/track/${currentSong.id}?utm_source=generator&theme=0`;
+            
+            // Configurar iframe
+            spotifyIframe.src = embedUrl;
+            spotifyPlayerDiv.style.display = 'block';
+            audioPlayer.style.display = 'none';
+            
+            showStatus('scan-status', '🎵 Reproductor de Spotify cargado. ¡Dale play!', 'success');
+            
+            // Scroll hacia el reproductor para que sea visible
+            spotifyPlayerDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         // Buscar canciones populares (intentar API real primero)
@@ -758,41 +803,6 @@
 
             const randomId = popularSongs[Math.floor(Math.random() * popularSongs.length)];
             await loadSong(randomId);
-        }
-
-        // Iniciar reproducción en la página
-        function startPlayback() {
-            if (!currentSong) {
-                showStatus('scan-status', 'Primero carga una canción', 'error');
-                return;
-            }
-
-            console.log('🎵 HITSTER: Iniciando reproducción en la página...');
-
-            const spotifyPlayer = document.getElementById('spotify-player');
-            const audioPlayer = document.getElementById('audio-player');
-
-            // Si tenemos reproductor de Spotify embebido
-            if (spotifyPlayer.style.display !== 'none') {
-                // El iframe de Spotify ya debería estar cargado y listo
-                showStatus('scan-status', '🎵 ¡Usa el reproductor de Spotify de arriba!', 'success');
-                
-                // Scroll hacia el reproductor para que sea visible
-                spotifyPlayer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
-            } else if (audioPlayer.style.display !== 'none') {
-                // Reproducir preview de audio
-                audioPlayer.currentTime = 0; // Empezar desde el principio
-                audioPlayer.play().then(() => {
-                    showStatus('scan-status', '🎵 Reproduciendo preview (30 segundos)', 'success');
-                }).catch(error => {
-                    console.error('Error reproduciendo audio:', error);
-                    showStatus('scan-status', 'Error al reproducir. Prueba "Abrir en Spotify"', 'error');
-                });
-            } else {
-                // Fallback: abrir en Spotify
-                openInSpotify();
-            }
         }
 
         // Abrir canción en Spotify
@@ -914,10 +924,9 @@
             }
         }, 1000);
 
-        // Agregar después de la línea 700
+        // Agregar función para pausar todo
         function pausePlayback() {
             const audioPlayer = document.getElementById('audio-player');
-            const spotifyPlayer = document.getElementById('spotify-player');
             
             // Pausar audio HTML5
             if (audioPlayer && !audioPlayer.paused) {
