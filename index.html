@@ -276,15 +276,29 @@
                 </div>
                 
                 <div class="controls">
-                    <button class="control-btn" onclick="playFullSong()">▶️ Reproducir Canción</button>
-                    <button class="control-btn" onclick="pausePlayback()">⏸️ Pausar</button>
+                    <button class="control-btn" onclick="startPlayback()">▶️ Iniciar Reproducción</button>
                     <button class="control-btn" onclick="stopAndReveal()">🔍 Revelar Información</button>
+                    <button class="control-btn" onclick="openInSpotify()">🎵 Abrir en Spotify</button>
                     <button class="control-btn" onclick="addToTimeline()">➕ Agregar a Timeline</button>
                 </div>
                 
                 <audio id="audio-player" controls style="width: 100%; margin-top: 20px; display: none;">
                     Tu navegador no soporta el elemento de audio.
                 </audio>
+                
+                <!-- Reproductor de Spotify embebido -->
+                <div id="spotify-player" style="margin-top: 20px; display: none;">
+                    <iframe id="spotify-iframe" 
+                            style="border-radius:12px" 
+                            src="" 
+                            width="100%" 
+                            height="152" 
+                            frameBorder="0" 
+                            allowfullscreen="" 
+                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                            loading="lazy">
+                    </iframe>
+                </div>
             </div>
         </div>
 
@@ -719,67 +733,48 @@
             await loadSong(randomId);
         }
 
-        // Reproducir canción completa desde el principio
-        async function playFullSong() {
+        // Iniciar reproducción en la página
+        function startPlayback() {
             if (!currentSong) {
                 showStatus('scan-status', 'Primero carga una canción', 'error');
                 return;
             }
 
-            console.log('🎵 HITSTER: Intentando reproducir canción completa...');
+            console.log('🎵 HITSTER: Iniciando reproducción en la página...');
 
-            // Si tenemos reproductor de Spotify conectado
-            if (spotifyPlayer && deviceId && !accessToken.startsWith('MOCK_TOKEN_')) {
-                try {
-                    // Reproducir en el dispositivo de Spotify
-                    const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${accessToken}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            uris: [`spotify:track:${currentSong.id}`],
-                            position_ms: 0 // Empezar desde el principio
-                        })
-                    });
+            const spotifyPlayer = document.getElementById('spotify-player');
+            const audioPlayer = document.getElementById('audio-player');
 
-                    if (response.ok || response.status === 204) {
-                        console.log('🎵 HITSTER: Reproduciendo en Spotify!');
-                        showStatus('scan-status', '🎵 Reproduciendo canción completa en Spotify!', 'success');
-                        return;
-                    }
-                } catch (error) {
-                    console.log('🎵 HITSTER: Error con reproductor Spotify, usando fallback');
-                }
-            }
-
-            // Fallback: abrir en Spotify directamente
-            if (currentSong.external_url) {
-                console.log('🎵 HITSTER: Abriendo en Spotify como fallback');
-                window.open(currentSong.external_url, '_blank');
-                showStatus('scan-status', '🎵 Abriendo en Spotify (escucha desde el principio)', 'success');
+            // Si tenemos reproductor de Spotify embebido
+            if (spotifyPlayer.style.display !== 'none') {
+                // El iframe de Spotify ya debería estar cargado y listo
+                showStatus('scan-status', '🎵 ¡Usa el reproductor de Spotify de arriba!', 'success');
+                
+                // Scroll hacia el reproductor para que sea visible
+                spotifyPlayer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+            } else if (audioPlayer.style.display !== 'none') {
+                // Reproducir preview de audio
+                audioPlayer.currentTime = 0; // Empezar desde el principio
+                audioPlayer.play().then(() => {
+                    showStatus('scan-status', '🎵 Reproduciendo preview (30 segundos)', 'success');
+                }).catch(error => {
+                    console.error('Error reproduciendo audio:', error);
+                    showStatus('scan-status', 'Error al reproducir. Prueba "Abrir en Spotify"', 'error');
+                });
             } else {
-                showStatus('scan-status', 'No se puede reproducir esta canción', 'error');
+                // Fallback: abrir en Spotify
+                openInSpotify();
             }
         }
 
-        // Pausar reproducción
-        async function pausePlayback() {
-            if (spotifyPlayer && !accessToken.startsWith('MOCK_TOKEN_')) {
-                try {
-                    await fetch('https://api.spotify.com/v1/me/player/pause', {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${accessToken}`
-                        }
-                    });
-                    showStatus('scan-status', '⏸️ Reproducción pausada', 'success');
-                } catch (error) {
-                    console.log('🎵 HITSTER: Error pausando');
-                }
+        // Abrir canción en Spotify
+        function openInSpotify() {
+            if (currentSong && currentSong.external_url) {
+                window.open(currentSong.external_url, '_blank');
+                showStatus('scan-status', '🎵 Abriendo en Spotify...', 'success');
             } else {
-                showStatus('scan-status', 'Pausa la reproducción en Spotify manualmente', 'error');
+                showStatus('scan-status', 'No se puede abrir en Spotify', 'error');
             }
         }
 
