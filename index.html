@@ -316,6 +316,58 @@
         const REDIRECT_URI = 'https://retspih.onrender.com/';
         const SCOPES = 'user-read-email user-read-private streaming user-read-playback-state user-modify-playback-state';
 
+        // Función para manejar eventos de audio
+        function setupAudioListeners() {
+            if (!audioPlayer) return;
+
+            audioPlayer.addEventListener('play', () => {
+                showStatus('scan-status', '🎵 Reproduciendo canción', 'success');
+            });
+
+            audioPlayer.addEventListener('pause', () => {
+                showStatus('scan-status', '⏸️ Reproducción pausada', 'success');
+            });
+
+            audioPlayer.addEventListener('ended', () => {
+                showStatus('scan-status', '🎵 Reproducción terminada', 'success');
+            });
+
+            audioPlayer.addEventListener('error', (e) => {
+                console.error('Audio Error:', e);
+                showStatus('scan-status', 'Error al reproducir audio', 'error');
+            });
+        }
+
+        // Función para precargar audio
+        function preloadAudio(src) {
+            if (!audioPlayer) return;
+
+            audioPlayer.src = src;
+            audioPlayer.preload = 'auto';
+            
+            // Mostrar controles de audio
+            audioPlayer.style.display = 'block';
+
+            // Manejar errores de precarga
+            audioPlayer.addEventListener('error', (e) => {
+                console.error('Preload Error:', e);
+                showStatus('scan-status', 'No se pudo precargar el audio', 'error');
+            });
+        }
+
+        // Función para obtener URL de audio con fallback
+        function getAudioUrl(song) {
+            // Prioridades para obtener URL de audio
+            const audioSources = [
+                song.preview_url,  // Preview de Spotify
+                `https://open.spotify.com/track/${song.id}`,  // Enlace de Spotify como fallback
+                // Puedes agregar más fuentes de audio aquí en el futuro
+            ];
+
+            // Devolver la primera URL válida
+            return audioSources.find(url => url && url.trim() !== '') || null;
+        }
+
         // Función para reproducir la canción completa
         function playFullSong() {
             if (!currentSong) {
