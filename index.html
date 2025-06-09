@@ -372,11 +372,25 @@
         async function getTokenFromCode() {
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
+            const error = urlParams.get('error');
             
-            if (!code) return null;
+            if (error) {
+                console.error('Error en autorización:', error);
+                return null;
+            }
+            
+            if (!code) {
+                console.log('No hay código en la URL');
+                return null;
+            }
+
+            console.log('Código encontrado, intercambiando por token...');
 
             const codeVerifier = sessionStorage.getItem('code_verifier');
-            if (!codeVerifier) return null;
+            if (!codeVerifier) {
+                console.error('No se encontró code_verifier');
+                return null;
+            }
 
             try {
                 const response = await fetch('https://accounts.spotify.com/api/token', {
@@ -393,12 +407,18 @@
                     })
                 });
 
+                console.log('Respuesta del servidor:', response.status);
                 const data = await response.json();
+                console.log('Datos recibidos:', data);
+
                 if (data.access_token) {
                     sessionStorage.removeItem('code_verifier');
                     // Limpiar la URL
                     window.history.replaceState({}, document.title, window.location.pathname);
+                    console.log('Token obtenido exitosamente');
                     return data.access_token;
+                } else {
+                    console.error('No se recibió access_token:', data);
                 }
             } catch (error) {
                 console.error('Error obteniendo token:', error);
@@ -409,12 +429,21 @@
 
         // Inicializar la aplicación
         async function initApp() {
-            accessToken = await getTokenFromCode();
+            // Mostrar estado de carga
+            showStatus('auth-status', 'Verificando conexión con Spotify...', 'success');
             
-            if (accessToken) {
-                showStatus('auth-status', 'Conectado exitosamente con Spotify!', 'success');
-            } else {
-                showStatus('auth-status', 'Conecta con Spotify para comenzar a jugar', 'error');
+            try {
+                accessToken = await getTokenFromCode();
+                
+                if (accessToken) {
+                    showStatus('auth-status', '✅ Conectado exitosamente con Spotify!', 'success');
+                    console.log('Token obtenido exitosamente');
+                } else {
+                    showStatus('auth-status', 'Conecta con Spotify para comenzar a jugar', 'error');
+                }
+            } catch (error) {
+                console.error('Error en inicialización:', error);
+                showStatus('auth-status', 'Error al conectar con Spotify. Intenta nuevamente.', 'error');
             }
         }
 
@@ -657,14 +686,22 @@
         // Mostrar estado
         function showStatus(elementId, message, type) {
             const statusDiv = document.getElementById(elementId);
+            if (!statusDiv) return;
+            
             statusDiv.textContent = message;
             statusDiv.className = `status ${type}`;
             statusDiv.classList.remove('hidden');
             
-            // Ocultar después de 5 segundos
-            setTimeout(() => {
-                statusDiv.classList.add('hidden');
-            }, 5000);
+            // Ocultar después de 8 segundos (más tiempo para mensajes importantes)
+            if (type === 'error') {
+                setTimeout(() => {
+                    statusDiv.classList.add('hidden');
+                }, 8000);
+            } else {
+                setTimeout(() => {
+                    statusDiv.classList.add('hidden');
+                }, 5000);
+            }
         }
 
         function revealInfo() {
