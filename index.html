@@ -267,16 +267,18 @@
             <h2 class="section-title">🎵 Reproductor</h2>
             <div class="player-section">
                 <div class="song-info" id="song-info">
-                    <div class="song-title" id="song-title">Título de la canción</div>
-                    <div class="song-artist" id="song-artist">Artista</div>
-                    <div class="song-year" id="song-year">Año: ----</div>
+                    <div class="song-title" id="song-title">🎵 Canción Lista</div>
+                    <div class="song-artist" id="song-artist" style="display: none;">Artista</div>
+                    <div class="song-year" id="song-year" style="display: none;">Año: ----</div>
+                    <div id="mystery-info" style="margin: 20px 0; font-size: 1.2em; color: #1db954;">
+                        🎧 Escucha la canción y adivina cuándo fue lanzada
+                    </div>
                 </div>
                 
                 <div class="controls">
-                    <button class="control-btn" onclick="playPreview()">▶️ Reproducir</button>
-                    <button class="control-btn" onclick="pausePreview()">⏸️ Pausar</button>
-                    <button class="control-btn" onclick="openInSpotify()">🎵 Abrir en Spotify</button>
-                    <button class="control-btn" onclick="revealInfo()">📅 Mostrar Año</button>
+                    <button class="control-btn" onclick="playFullSong()">▶️ Reproducir Canción</button>
+                    <button class="control-btn" onclick="pausePlayback()">⏸️ Pausar</button>
+                    <button class="control-btn" onclick="stopAndReveal()">🔍 Revelar Información</button>
                     <button class="control-btn" onclick="addToTimeline()">➕ Agregar a Timeline</button>
                 </div>
                 
@@ -305,10 +307,14 @@
         let currentSong = null;
         let timeline = [];
         let audioPlayer = null;
+        let spotifyPlayer = null;
+        let deviceId = null;
+        let songRevealed = false;
 
         // Configuración de Spotify
         const CLIENT_ID = 'f00b228ef4de4eadae51f64a6d2ab8d4';
         const REDIRECT_URI = 'https://retspih.onrender.com/';
+        const SCOPES = 'user-read-email user-read-private streaming user-read-playback-state user-modify-playback-state';
 
         // Función simplificada sin PKCE - usando método directo
         function authenticateSpotify() {
@@ -402,6 +408,11 @@
                 if (accessToken) {
                     console.log('🎵 HITSTER: ¡Autenticación exitosa!');
                     showStatus('auth-status', '✅ ¡Conectado exitosamente con Spotify!', 'success');
+                    
+                    // Inicializar Spotify Web Playback SDK si tenemos token real
+                    if (!accessToken.startsWith('MOCK_TOKEN_')) {
+                        await initSpotifyPlayer();
+                    }
                 } else {
                     console.log('🎵 HITSTER: Esperando autenticación...');
                     showStatus('auth-status', 'Conecta con Spotify para comenzar a jugar', 'error');
@@ -571,7 +582,50 @@
             await loadSong(randomId);
         }
 
-        // Mostrar información de la canción
+        // Inicializar Spotify Web Playback SDK
+        async function initSpotifyPlayer() {
+            if (!window.Spotify) {
+                // Cargar el SDK de Spotify
+                const script = document.createElement('script');
+                script.src = 'https://sdk.scdn.co/spotify-player.js';
+                script.async = true;
+                document.body.appendChild(script);
+                
+                // Esperar a que cargue
+                await new Promise(resolve => {
+                    window.onSpotifyWebPlaybackSDKReady = resolve;
+                });
+            }
+
+            const player = new Spotify.Player({
+                name: 'Hitster Personal Player',
+                getOAuthToken: cb => { cb(accessToken); },
+                volume: 0.5
+            });
+
+            // Eventos del reproductor
+            player.addListener('ready', ({ device_id }) => {
+                console.log('🎵 HITSTER: Reproductor listo con Device ID', device_id);
+                deviceId = device_id;
+                spotifyPlayer = player;
+                showStatus('scan-status', '🎵 Reproductor de Spotify listo!', 'success');
+            });
+
+            player.addListener('not_ready', ({ device_id }) => {
+                console.log('🎵 HITSTER: Reproductor no disponible', device_id);
+            });
+
+            player.addListener('player_state_changed', (state) => {
+                if (!state) return;
+                console.log('🎵 HITSTER: Estado del reproductor:', state);
+            });
+
+            // Conectar el reproductor
+            const success = await player.connect();
+            if (success) {
+                console.log('🎵 HITSTER: Conexión al reproductor exitosa!');
+            }
+        }
         function displaySong() {
             if (!currentSong) return;
 
