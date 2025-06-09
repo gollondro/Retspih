@@ -719,6 +719,91 @@
             await loadSong(randomId);
         }
 
+        // Reproducir canción completa desde el principio
+        async function playFullSong() {
+            if (!currentSong) {
+                showStatus('scan-status', 'Primero carga una canción', 'error');
+                return;
+            }
+
+            console.log('🎵 HITSTER: Intentando reproducir canción completa...');
+
+            // Si tenemos reproductor de Spotify conectado
+            if (spotifyPlayer && deviceId && !accessToken.startsWith('MOCK_TOKEN_')) {
+                try {
+                    // Reproducir en el dispositivo de Spotify
+                    const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            uris: [`spotify:track:${currentSong.id}`],
+                            position_ms: 0 // Empezar desde el principio
+                        })
+                    });
+
+                    if (response.ok || response.status === 204) {
+                        console.log('🎵 HITSTER: Reproduciendo en Spotify!');
+                        showStatus('scan-status', '🎵 Reproduciendo canción completa en Spotify!', 'success');
+                        return;
+                    }
+                } catch (error) {
+                    console.log('🎵 HITSTER: Error con reproductor Spotify, usando fallback');
+                }
+            }
+
+            // Fallback: abrir en Spotify directamente
+            if (currentSong.external_url) {
+                console.log('🎵 HITSTER: Abriendo en Spotify como fallback');
+                window.open(currentSong.external_url, '_blank');
+                showStatus('scan-status', '🎵 Abriendo en Spotify (escucha desde el principio)', 'success');
+            } else {
+                showStatus('scan-status', 'No se puede reproducir esta canción', 'error');
+            }
+        }
+
+        // Pausar reproducción
+        async function pausePlayback() {
+            if (spotifyPlayer && !accessToken.startsWith('MOCK_TOKEN_')) {
+                try {
+                    await fetch('https://api.spotify.com/v1/me/player/pause', {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+                    showStatus('scan-status', '⏸️ Reproducción pausada', 'success');
+                } catch (error) {
+                    console.log('🎵 HITSTER: Error pausando');
+                }
+            } else {
+                showStatus('scan-status', 'Pausa la reproducción en Spotify manualmente', 'error');
+            }
+        }
+
+        // Revelar información de la canción
+        function stopAndReveal() {
+            if (!currentSong) {
+                showStatus('scan-status', 'Primero carga una canción', 'error');
+                return;
+            }
+
+            songRevealed = true;
+            
+            // Mostrar toda la información real
+            document.getElementById('song-title').textContent = `Canción: ${currentSong.name}`;
+            document.getElementById('song-artist').textContent = `Artista: ${currentSong.artist}`;
+            document.getElementById('song-year').textContent = `Año: ${currentSong.year}`;
+            document.getElementById('mystery-info').style.display = 'none';
+
+            // Pausar si está reproduciendo
+            pausePlayback();
+
+            showStatus('scan-status', '🔍 ¡Información revelada!', 'success');
+        }
+
         // Agregar canción al timeline
         function addToTimeline() {
             if (!currentSong) {
