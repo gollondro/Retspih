@@ -16,16 +16,29 @@
         // Inicializar cuando carga la página
         window.addEventListener('load', function() {
             console.log('🎵 HITSTER: Página cargada completamente');
-            initApp();
+            setTimeout(() => {
+                initApp();
+            }, 100); // Pequeño delay para asegurar que todo esté listo
         });
 
         // También intentar cuando el DOM está listo
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🎵 HITSTER: DOM listo');
-            if (!audioPlayer) {
+            setTimeout(() => {
+                if (!accessToken) { // Solo si no se ha inicializado
+                    initApp();
+                }
+            }, 100);
+        });
+
+        // Forzar inicialización después de 1 segundo si no se ha hecho
+        setTimeout(() => {
+            console.log('🎵 HITSTER: Verificación tardía de inicialización');
+            if (!accessToken && (window.location.search.includes('code=') || window.location.search.length === 0)) {
+                console.log('🎵 HITSTER: Forzando inicialización...');
                 initApp();
             }
-        });
+        }, 1000);
 
         .container {
             max-width: 1200px;
