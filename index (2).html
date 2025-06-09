@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hitster Personal - Spotify Edition</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1db954, #191414);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            font-weight: bold;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .game-section {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: fadeInUp 1s ease;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            color: #1db954;
+            font-weight: bold;
+        }
+
+        .auth-section {
+            text-align: center;
+        }
+
+        .spotify-btn {
+            background: #1db954;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
+        }
+
+        .spotify-btn:hover {
+            background: #1ed760;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(29, 185, 84, 0.4);
+        }
+
+        .qr-scanner {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .scan-btn {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            margin: 10px;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .scan-btn:hover {
+            background: #ff8c42;
+            transform: translateY(-2px);
+        }
+
+        .player-section {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .song-info {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .song-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .song-artist {
+            font-size: 1.1em;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+
+        .song-year {
+            font-size: 1em;
+            color: #1db954;
+            font-weight: bold;
+        }
+
+        .controls {
+            margin: 20px 0;
+        }
+
+        .control-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .timeline {
+            margin-top: 30px;
+        }
+
+        .timeline-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 4px solid #1db954;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-item:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateX(10px);
+        }
+
+        .qr-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px;
+            margin: 10px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 1em;
+        }
+
+        .qr-input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: rgba(29, 185, 84, 0.2);
+            border: 1px solid #1db954;
+        }
+
+        .status.error {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #ff4444;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2em; }
+            .game-section { padding: 20px; margin: 15px; }
+            .control-btn { margin: 5px; padding: 8px 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Hitster Personal</h1>
+            <p>Juega con tus canciones favoritas de Spotify</p>
+        </div>
+
+        <!-- Sección de autenticación con Spotify -->
+        <div class="game-section" id="auth-section">
+            <h2 class="section-title">🎧 Conectar con Spotify</h2>
+            <div class="auth-section">
+                <p style="margin-bottom: 20px;">Primero necesitas conectar tu cuenta de Spotify para poder reproducir música</p>
+                
+                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: left;">
+                    <h3 style="color: #1db954; margin-bottom: 10px;">📋 Configuración requerida:</h3>
+                    <ol style="margin-left: 20px; line-height: 1.6;">
+                        <li>Ve a <a href="https://developer.spotify.com/dashboard" target="_blank" style="color: #1db954;">developer.spotify.com/dashboard</a></li>
+                        <li>Crea una nueva aplicación</li>
+                        <li>Copia el "Client ID"</li>
+                        <li>Reemplaza 'tu_client_id_aqui' en el código con tu Client ID real</li>
+                        <li>Añade esta URL como Redirect URI: <code style="background: rgba(0,0,0,0.3); padding: 2px 5px; border-radius: 3px;">${window.location.origin + window.location.pathname}</code></li>
+                    </ol>
+                </div>
+                
+                <button class="spotify-btn" onclick="authenticateSpotify()">
+                    🎶 Conectar con Spotify
+                </button>
+                <div id="auth-status" class="status hidden"></div>
+            </div>
+        </div>
+
+        <!-- Sección del escáner QR -->
+        <div class="game-section" id="scanner-section">
+            <h2 class="section-title">📱 Escanear Código QR</h2>
+            <div class="qr-scanner">
+                <p style="margin-bottom: 20px;">Escanea el QR de una canción o pega el enlace de Spotify</p>
+                <input type="text" class="qr-input" id="song-url" placeholder="Pega aquí el enlace de Spotify o el contenido del QR">
+                <br>
+                <button class="scan-btn" onclick="processSong()">🔍 Procesar Canción</button>
+                <button class="scan-btn" onclick="generateRandomSong()">🎲 Canción Aleatoria</button>
+                <div id="scan-status" class="status hidden"></div>
+            </div>
+        </div>
+
+        <!-- Sección del reproductor -->
+        <div class="game-section" id="player-section">
+            <h2 class="section-title">🎵 Reproductor</h2>
+            <div class="player-section">
+                <div class="song-info" id="song-info">
+                    <div class="song-title" id="song-title">Título de la canción</div>
+                    <div class="song-artist" id="song-artist">Artista</div>
+                    <div class="song-year" id="song-year">Año: ----</div>
+                </div>
+                
+                <div class="controls">
+                    <button class="control-btn" onclick="playPreview()">▶️ Reproducir</button>
+                    <button class="control-btn" onclick="pausePreview()">⏸️ Pausar</button>
+                    <button class="control-btn" onclick="revealInfo()">📅 Mostrar Año</button>
+                    <button class="control-btn" onclick="addToTimeline()">➕ Agregar a Timeline</button>
+                </div>
+                
+                <audio id="audio-player" controls style="width: 100%; margin-top: 20px; display: none;">
+                    Tu navegador no soporta el elemento de audio.
+                </audio>
+            </div>
+        </div>
+
+        <!-- Timeline del juego -->
+        <div class="game-section" id="timeline-section">
+            <h2 class="section-title">📈 Mi Timeline Musical</h2>
+            <div class="timeline" id="timeline">
+                <p style="text-align: center; opacity: 0.7;">Tu timeline aparecerá aquí conforme agregues canciones</p>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="control-btn" onclick="clearTimeline()">🗑️ Limpiar Timeline</button>
+                <button class="control-btn" onclick="sortTimeline()">📊 Ordenar por Año</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let accessToken = null;
+        let currentSong = null;
+        let timeline = [];
+        let audioPlayer = document.getElementById('audio-player');
+
+        // Configuración de Spotify (DEBES REEMPLAZAR CON TUS DATOS)
+        const CLIENT_ID = 'tu_client_id_aqui'; // Reemplazar con tu Client ID de Spotify Developer Dashboard
+        const REDIRECT_URI = window.location.origin + window.location.pathname;
+        const SCOPES = 'streaming user-read-email user-read-private';
+
+        // Función para autenticar con Spotify
+        function authenticateSpotify() {
+            if (CLIENT_ID === 'tu_client_id_aqui') {
+                showStatus('auth-status', '❌ ERROR: Necesitas configurar tu Client ID de Spotify. Ve a developer.spotify.com/dashboard', 'error');
+                return;
+            }
+
+            const authUrl = `https://accounts.spotify.com/authorize?` +
+                `client_id=${CLIENT_ID}&` +
+                `response_type=token&` +
+                `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+                `scope=${encodeURIComponent(SCOPES)}`;
+            
+            console.log('Redirigiendo a:', authUrl);
+            window.location.href = authUrl;
+        }
+
+        // Obtener token de la URL
+        function getTokenFromUrl() {
+            const hash = window.location.hash.substring(1);
+            const params = new URLSearchParams(hash);
+            return params.get('access_token');
+        }
+
+        // Inicializar la aplicación
+        function initApp() {
+            accessToken = getTokenFromUrl();
+            
+            if (accessToken) {
+                showStatus('auth-status', 'Conectado exitosamente con Spotify!', 'success');
+                // Limpiar la URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else {
+                showStatus('auth-status', 'Necesitas conectar con Spotify para continuar', 'error');
+            }
+        }
+
+        // Procesar canción desde QR o URL
+        async function processSong() {
+            const input = document.getElementById('song-url').value;
+            if (!input) {
+                showStatus('scan-status', 'Por favor ingresa un enlace de Spotify', 'error');
+                return;
+            }
+
+            if (!accessToken) {
+                showStatus('scan-status', 'Primero conecta con Spotify', 'error');
+                return;
+            }
+
+            // Extraer ID de la canción de diferentes formatos de URL
+            let trackId = extractTrackId(input);
+            
+            if (!trackId) {
+                showStatus('scan-status', 'URL de Spotify no válida', 'error');
+                return;
+            }
+
+            await loadSong(trackId);
+        }
+
+        // Extraer ID de track de URL de Spotify
+        function extractTrackId(url) {
+            const patterns = [
+                /spotify:track:([a-zA-Z0-9]+)/,
+                /open\.spotify\.com\/track\/([a-zA-Z0-9]+)/,
+                /spotify\.com\/track\/([a-zA-Z0-9]+)/
+            ];
+
+            for (let pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) return match[1];
+            }
+            
+            return null;
+        }
+
+        // Cargar información de la canción
+        async function loadSong(trackId) {
+            try {
+                showStatus('scan-status', 'Cargando canción...', 'success');
+                
+                const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al obtener la canción');
+                }
+
+                const track = await response.json();
+                currentSong = {
+                    id: track.id,
+                    name: track.name,
+                    artist: track.artists[0].name,
+                    year: new Date(track.album.release_date).getFullYear(),
+                    preview_url: track.preview_url,
+                    external_url: track.external_urls.spotify
+                };
+
+                displaySong();
+                showStatus('scan-status', 'Canción cargada exitosamente!', 'success');
+                
+            } catch (error) {
+                showStatus('scan-status', 'Error al cargar la canción: ' + error.message, 'error');
+            }
+        }
+
+        // Generar canción aleatoria (demo)
+        async function generateRandomSong() {
+            if (!accessToken) {
+                showStatus('scan-status', 'Primero conecta con Spotify', 'error');
+                return;
+            }
+
+            // Lista de IDs de canciones populares para demo
+            const demoSongs = [
+                '4iV5W9uYEdYUVa79Axb7Rh', // Never Gonna Give You Up
+                '5ChkMS8OtdzJeqyybCc9R5', // I Want It That Way
+                '2WfaOiMkCvy7F5fcp2zZ8L', // Smells Like Teen Spirit
+                '0VjIjW4GlULA7lCHaCAOvk', // Mr. Brightside
+                '6DCZcSspjsKoFjzjrWoCdn'  // Don't Stop Believin'
+            ];
+
+            const randomId = demoSongs[Math.floor(Math.random() * demoSongs.length)];
+            await loadSong(randomId);
+        }
+
+        // Mostrar información de la canción
+        function displaySong() {
+            if (!currentSong) return;
+
+            document.getElementById('song-title').textContent = currentSong.name;
+            document.getElementById('song-artist').textContent = currentSong.artist;
+            document.getElementById('song-year').textContent = `Año: ????`;
+            document.getElementById('song-info').style.display = 'block';
+
+            // Configurar reproductor
+            if (currentSong.preview_url) {
+                audioPlayer.src = currentSong.preview_url;
+                audioPlayer.style.display = 'block';
+            } else {
+                audioPlayer.style.display = 'none';
+                showStatus('scan-status', 'Esta canción no tiene preview disponible', 'error');
+            }
+        }
+
+        // Controles del reproductor
+        function playPreview() {
+            if (audioPlayer.src) {
+                audioPlayer.play();
+            }
+        }
+
+        function pausePreview() {
+            audioPlayer.pause();
+        }
+
+        function revealInfo() {
+            if (currentSong) {
+                document.getElementById('song-year').textContent = `Año: ${currentSong.year}`;
+            }
+        }
+
+        // Agregar canción al timeline
+        function addToTimeline() {
+            if (!currentSong) {
+                alert('Primero carga una canción');
+                return;
+            }
+
+            // Verificar si ya está en el timeline
+            if (timeline.find(song => song.id === currentSong.id)) {
+                alert('Esta canción ya está en tu timeline');
+                return;
+            }
+
+            timeline.push({...currentSong});
+            updateTimelineDisplay();
+        }
+
+        // Actualizar visualización del timeline
+        function updateTimelineDisplay() {
+            const timelineDiv = document.getElementById('timeline');
+            
+            if (timeline.length === 0) {
+                timelineDiv.innerHTML = '<p style="text-align: center; opacity: 0.7;">Tu timeline aparecerá aquí conforme agregues canciones</p>';
+                return;
+            }
+
+            timelineDiv.innerHTML = timeline.map((song, index) => `
+                <div class="timeline-item">
+                    <strong>${song.name}</strong> - ${song.artist} (${song.year})
+                    <button class="control-btn" onclick="removeSong(${index})" style="float: right;">❌</button>
+                </div>
+            `).join('');
+        }
+
+        // Remover canción del timeline
+        function removeSong(index) {
+            timeline.splice(index, 1);
+            updateTimelineDisplay();
+        }
+
+        // Limpiar timeline
+        function clearTimeline() {
+            if (confirm('¿Estás seguro de que quieres limpiar tu timeline?')) {
+                timeline = [];
+                updateTimelineDisplay();
+            }
+        }
+
+        // Ordenar timeline por año
+        function sortTimeline() {
+            timeline.sort((a, b) => a.year - b.year);
+            updateTimelineDisplay();
+        }
+
+        // Mostrar estado
+        function showStatus(elementId, message, type) {
+            const statusDiv = document.getElementById(elementId);
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.classList.remove('hidden');
+            
+            // Ocultar después de 5 segundos
+            setTimeout(() => {
+                statusDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Inicializar cuando carga la página
+        window.addEventListener('load', initApp);
+    </script>
+</body>
+</html>
