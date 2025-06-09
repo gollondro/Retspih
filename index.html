@@ -14,7 +14,18 @@
             color: white;
             overflow-x: hidden;
         // Inicializar cuando carga la página
-        window.addEventListener('load', initApp);
+        window.addEventListener('load', function() {
+            console.log('🎵 HITSTER: Página cargada completamente');
+            initApp();
+        });
+
+        // También intentar cuando el DOM está listo
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎵 HITSTER: DOM listo');
+            if (!audioPlayer) {
+                initApp();
+            }
+        });
 
         .container {
             max-width: 1200px;
@@ -327,10 +338,14 @@
 
         // Función para autenticar con Spotify (PKCE con workaround para storage)
         async function authenticateSpotify() {
+            console.log('🎵 HITSTER: Iniciando autenticación...');
+            
             try {
                 // Generar code verifier y challenge para PKCE
                 const codeVerifier = generateCodeVerifier();
                 const codeChallenge = await generateCodeChallenge(codeVerifier);
+                
+                console.log('🎵 HITSTER: Code verifier generado, longitud:', codeVerifier.length);
                 
                 // Como no podemos usar sessionStorage, lo incluimos en la URL como state
                 const state = btoa(codeVerifier).replace(/[+=\/]/g, ''); // Limpiar caracteres especiales
@@ -344,10 +359,11 @@
                     `code_challenge=${codeChallenge}&` +
                     `state=${state}`;
                 
-                console.log('Redirigiendo a Spotify con PKCE...');
+                console.log('🎵 HITSTER: Redirigiendo a Spotify con PKCE...');
+                console.log('🎵 HITSTER: URL de auth:', authUrl.substring(0, 100) + '...');
                 window.location.href = authUrl;
             } catch (error) {
-                console.error('Error en autenticación:', error);
+                console.error('🎵 HITSTER: Error en autenticación:', error);
                 showStatus('auth-status', 'Error al iniciar autenticación', 'error');
             }
         }
@@ -405,28 +421,34 @@
             const state = urlParams.get('state');
             const error = urlParams.get('error');
             
+            console.log('🎵 HITSTER: Verificando URL params...');
+            console.log('🎵 HITSTER: Code presente:', !!code);
+            console.log('🎵 HITSTER: State presente:', !!state);
+            console.log('🎵 HITSTER: Error presente:', !!error);
+            
             if (error) {
-                console.error('Error en autorización:', error);
+                console.error('🎵 HITSTER: Error en autorización:', error);
                 showStatus('auth-status', 'Error en autorización: ' + error, 'error');
                 return null;
             }
             
             if (!code) {
-                console.log('No hay código en la URL');
+                console.log('🎵 HITSTER: No hay código en la URL - usuario no autenticado');
                 return null;
             }
 
             if (!state) {
-                console.error('No se recibió state parameter');
+                console.error('🎵 HITSTER: No se recibió state parameter');
                 showStatus('auth-status', 'Error: falta parámetro de estado', 'error');
                 return null;
             }
 
-            console.log('Código encontrado, intercambiando por token...');
+            console.log('🎵 HITSTER: Código encontrado, intercambiando por token...');
 
             try {
                 // Recuperar code_verifier del state parameter
                 const codeVerifier = atob(state + '==='); // Agregar padding si es necesario
+                console.log('🎵 HITSTER: Code verifier recuperado, longitud:', codeVerifier.length);
                 
                 const response = await fetch('https://accounts.spotify.com/api/token', {
                     method: 'POST',
@@ -442,29 +464,29 @@
                     })
                 });
 
-                console.log('Respuesta del servidor:', response.status);
+                console.log('🎵 HITSTER: Respuesta del servidor:', response.status);
                 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('Error HTTP:', response.status, errorText);
+                    console.error('🎵 HITSTER: Error HTTP:', response.status, errorText);
                     showStatus('auth-status', `Error del servidor: ${response.status}`, 'error');
                     return null;
                 }
 
                 const data = await response.json();
-                console.log('Token exchange exitoso');
+                console.log('🎵 HITSTER: Token exchange exitoso');
 
                 if (data.access_token) {
                     // Limpiar la URL
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    console.log('Token obtenido exitosamente');
+                    console.log('🎵 HITSTER: Token obtenido exitosamente!');
                     return data.access_token;
                 } else {
-                    console.error('No se recibió access_token:', data);
+                    console.error('🎵 HITSTER: No se recibió access_token:', data);
                     showStatus('auth-status', 'Error: no se recibió token de acceso', 'error');
                 }
             } catch (error) {
-                console.error('Error obteniendo token:', error);
+                console.error('🎵 HITSTER: Error obteniendo token:', error);
                 showStatus('auth-status', 'Error al obtener token: ' + error.message, 'error');
             }
             
@@ -473,23 +495,24 @@
 
         // Inicializar la aplicación
         async function initApp() {
-            console.log('Inicializando aplicación...');
+            console.log('🎵 HITSTER: Inicializando aplicación...');
             
             // Inicializar audioPlayer
             audioPlayer = document.getElementById('audio-player');
+            console.log('🎵 HITSTER: Audio player encontrado:', !!audioPlayer);
             
             try {
                 accessToken = await getTokenFromCode();
                 
                 if (accessToken) {
-                    console.log('Token obtenido exitosamente!');
+                    console.log('🎵 HITSTER: Token obtenido exitosamente!');
                     showStatus('auth-status', '✅ Conectado exitosamente con Spotify!', 'success');
                 } else {
-                    console.log('No hay token disponible');
+                    console.log('🎵 HITSTER: No hay token disponible');
                     showStatus('auth-status', 'Conecta con Spotify para comenzar a jugar', 'error');
                 }
             } catch (error) {
-                console.error('Error en inicialización:', error);
+                console.error('🎵 HITSTER: Error en inicialización:', error);
                 showStatus('auth-status', 'Error al conectar con Spotify: ' + error.message, 'error');
             }
         }
