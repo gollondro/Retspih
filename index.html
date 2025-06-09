@@ -316,482 +316,61 @@
         const REDIRECT_URI = 'https://retspih.onrender.com/';
         const SCOPES = 'user-read-email user-read-private streaming user-read-playback-state user-modify-playback-state';
 
-        // Función simplificada sin PKCE - usando método directo
-        function authenticateSpotify() {
-            console.log('🎵 HITSTER: Iniciando autenticación directa...');
-            
-            // Generar un state simple para seguridad
-            const state = Math.random().toString(36).substring(2, 15);
-            
-            const authUrl = `https://accounts.spotify.com/authorize?` +
-                `client_id=${CLIENT_ID}&` +
-                `response_type=code&` +
-                `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
-                `scope=user-read-email%20user-read-private&` +
-                `state=${state}`;
-            
-            console.log('🎵 HITSTER: Redirigiendo a Spotify...');
-            window.location.href = authUrl;
-        }
-
-        // Intercambiar código por token usando un proxy CORS
-        async function getTokenFromCode() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            const error = urlParams.get('error');
-            
-            console.log('🎵 HITSTER: Verificando parámetros...');
-            console.log('🎵 HITSTER: Code presente:', !!code);
-            console.log('🎵 HITSTER: Error:', error);
-            
-            if (error) {
-                console.error('🎵 HITSTER: Error en autorización:', error);
-                showStatus('auth-status', 'Error en autorización: ' + error, 'error');
-                return null;
-            }
-            
-            if (!code) {
-                console.log('🎵 HITSTER: No hay código - usuario no autenticado');
-                return null;
-            }
-
-            console.log('🎵 HITSTER: Intentando intercambio de token real...');
-
-            try {
-                // Intentar obtener token real usando un proxy CORS gratuito
-                const response = await fetch('https://cors-anywhere.herokuapp.com/https://accounts.spotify.com/api/token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: new URLSearchParams({
-                        grant_type: 'authorization_code',
-                        code: code,
-                        redirect_uri: REDIRECT_URI,
-                        client_id: CLIENT_ID
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.access_token) {
-                        console.log('🎵 HITSTER: ¡Token real obtenido!');
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                        return data.access_token;
-                    }
-                }
-                
-                console.log('🎵 HITSTER: Proxy no disponible, usando token simulado');
-                
-            } catch (error) {
-                console.log('🎵 HITSTER: Error con token real, usando simulado:', error.message);
-            }
-
-            // Fallback: usar token simulado para testing
-            const mockToken = 'MOCK_TOKEN_' + Date.now();
-            window.history.replaceState({}, document.title, window.location.pathname);
-            console.log('🎵 HITSTER: Usando token simulado para testing');
-            return mockToken;
-        }
-
-        // Inicializar la aplicación
-        async function initApp() {
-            console.log('🎵 HITSTER: Inicializando aplicación...');
-            
-            audioPlayer = document.getElementById('audio-player');
-            console.log('🎵 HITSTER: Audio player encontrado:', !!audioPlayer);
-            
-            try {
-                accessToken = await getTokenFromCode();
-                
-                if (accessToken) {
-                    console.log('🎵 HITSTER: ¡Autenticación exitosa!');
-                    showStatus('auth-status', '✅ ¡Conectado exitosamente con Spotify!', 'success');
-                    
-                    // Inicializar Spotify Web Playback SDK si tenemos token real
-                    if (!accessToken.startsWith('MOCK_TOKEN_')) {
-                        await initSpotifyPlayer();
-                    }
-                } else {
-                    console.log('🎵 HITSTER: Esperando autenticación...');
-                    showStatus('auth-status', 'Conecta con Spotify para comenzar a jugar', 'error');
-                }
-            } catch (error) {
-                console.error('🎵 HITSTER: Error en inicialización:', error);
-                showStatus('auth-status', 'Error al conectar con Spotify', 'error');
-            }
-        }
-
-        // Procesar canción desde QR o URL
-        async function processSong() {
-            const input = document.getElementById('song-url').value;
-            if (!input) {
-                showStatus('scan-status', 'Por favor ingresa un enlace de Spotify', 'error');
+        // Función para reproducir la canción completa
+        function playFullSong() {
+            if (!currentSong) {
+                showStatus('scan-status', 'Primero carga una canción', 'error');
                 return;
             }
 
-            if (!accessToken) {
-                showStatus('scan-status', 'Primero conecta con Spotify', 'error');
-                return;
-            }
-
-            // Extraer ID de la canción de diferentes formatos de URL
-            let trackId = extractTrackId(input);
-            
-            if (!trackId) {
-                showStatus('scan-status', 'URL de Spotify no válida', 'error');
-                return;
-            }
-
-            await loadSong(trackId);
-        }
-
-        // Extraer ID de track de URL de Spotify
-        function extractTrackId(url) {
-            const patterns = [
-                /spotify:track:([a-zA-Z0-9]+)/,
-                /open\.spotify\.com\/track\/([a-zA-Z0-9]+)/,
-                /spotify\.com\/track\/([a-zA-Z0-9]+)/
-            ];
-
-            for (let pattern of patterns) {
-                const match = url.match(pattern);
-                if (match) return match[1];
-            }
-            
-            return null;
-        }
-
-        // Cargar información de la canción desde Spotify API
-        async function loadSong(trackId) {
-            try {
-                showStatus('scan-status', 'Cargando canción desde Spotify...', 'success');
-                
-                // Intentar usar la API real de Spotify si tenemos token real
-                if (accessToken && !accessToken.startsWith('MOCK_TOKEN_')) {
-                    try {
-                        const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-                            headers: {
-                                'Authorization': `Bearer ${accessToken}`
-                            }
-                        });
-
-                        if (response.ok) {
-                            const track = await response.json();
-                            currentSong = {
-                                id: track.id,
-                                name: track.name,
-                                artist: track.artists[0].name,
-                                year: new Date(track.album.release_date).getFullYear(),
-                                preview_url: track.preview_url,
-                                external_url: track.external_urls.spotify
-                            };
-
-                            displaySong();
-                            showStatus('scan-status', '🎵 Canción real cargada desde Spotify!', 'success');
-                            return;
-                        }
-                    } catch (apiError) {
-                        console.log('🎵 HITSTER: Error con API real, usando datos simulados');
-                    }
-                }
-
-                // Fallback: usar datos simulados expandidos
-                const mockSongs = {
-                    '4iV5W9uYEdYUVa79Axb7Rh': {
-                        id: '4iV5W9uYEdYUVa79Axb7Rh',
-                        name: 'Never Gonna Give You Up',
-                        artist: 'Rick Astley',
-                        year: 1987,
-                        preview_url: 'https://p.scdn.co/mp3-preview/1a6b7aeacdc6fb5d0d8e2cd6a6b7d9e4b',
-                        external_url: 'https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh'
-                    },
-                    '5ChkMS8OtdzJeqyybCc9R5': {
-                        id: '5ChkMS8OtdzJeqyybCc9R5',
-                        name: 'I Want It That Way',
-                        artist: 'Backstreet Boys',
-                        year: 1999,
-                        preview_url: null,
-                        external_url: 'https://open.spotify.com/track/5ChkMS8OtdzJeqyybCc9R5'
-                    },
-                    '2WfaOiMkCvy7F5fcp2zZ8L': {
-                        id: '2WfaOiMkCvy7F5fcp2zZ8L',
-                        name: 'Smells Like Teen Spirit',
-                        artist: 'Nirvana',
-                        year: 1991,
-                        preview_url: null,
-                        external_url: 'https://open.spotify.com/track/2WfaOiMkCvy7F5fcp2zZ8L'
-                    },
-                    '0VjIjW4GlULA7lCHaCAOvk': {
-                        id: '0VjIjW4GlULA7lCHaCAOvk',
-                        name: 'Mr. Brightside',
-                        artist: 'The Killers',
-                        year: 2003,
-                        preview_url: null,
-                        external_url: 'https://open.spotify.com/track/0VjIjW4GlULA7lCHaCAOvk'
-                    },
-                    '6DCZcSspjsKoFjzjrWoCdn': {
-                        id: '6DCZcSspjsKoFjzjrWoCdn',
-                        name: "Don't Stop Believin'",
-                        artist: 'Journey',
-                        year: 1981,
-                        preview_url: null,
-                        external_url: 'https://open.spotify.com/track/6DCZcSspjsKoFjzjrWoCdn'
-                    }
-                };
-
-                currentSong = mockSongs[trackId] || {
-                    id: trackId,
-                    name: 'Canción Desconocida',
-                    artist: 'Artista Desconocido',
-                    year: 2020,
-                    preview_url: null,
-                    external_url: `https://open.spotify.com/track/${trackId}`
-                };
-
-                displaySong();
-                showStatus('scan-status', '🎵 Datos simulados cargados (para testing)', 'success');
-                
-            } catch (error) {
-                showStatus('scan-status', 'Error al cargar la canción: ' + error.message, 'error');
-            }
-        }
-
-        function revealInfo() {
-            if (currentSong) {
-                document.getElementById('song-year').textContent = `Año: ${currentSong.year}`;
-            }
-        }
-        async function generateRandomSong() {
-            if (!accessToken) {
-                showStatus('scan-status', 'Primero conecta con Spotify', 'error');
-                return;
-            }
-
-            // Lista de IDs de canciones populares
-            const demoSongs = [
-                '4iV5W9uYEdYUVa79Axb7Rh', // Never Gonna Give You Up
-                '5ChkMS8OtdzJeqyybCc9R5', // I Want It That Way
-                '2WfaOiMkCvy7F5fcp2zZ8L', // Smells Like Teen Spirit
-                '0VjIjW4GlULA7lCHaCAOvk', // Mr. Brightside
-                '6DCZcSspjsKoFjzjrWoCdn'  // Don't Stop Believin'
-            ];
-
-            const randomId = demoSongs[Math.floor(Math.random() * demoSongs.length)];
-            await loadSong(randomId);
-        }
-
-        // Inicializar Spotify Web Playback SDK
-        async function initSpotifyPlayer() {
-            if (!window.Spotify) {
-                // Cargar el SDK de Spotify
-                const script = document.createElement('script');
-                script.src = 'https://sdk.scdn.co/spotify-player.js';
-                script.async = true;
-                document.body.appendChild(script);
-                
-                // Esperar a que cargue
-                await new Promise(resolve => {
-                    window.onSpotifyWebPlaybackSDKReady = resolve;
-                });
-            }
-
-            const player = new Spotify.Player({
-                name: 'Hitster Personal Player',
-                getOAuthToken: cb => { cb(accessToken); },
-                volume: 0.5
-            });
-
-            // Eventos del reproductor
-            player.addListener('ready', ({ device_id }) => {
-                console.log('🎵 HITSTER: Reproductor listo con Device ID', device_id);
-                deviceId = device_id;
-                spotifyPlayer = player;
-                showStatus('scan-status', '🎵 Reproductor de Spotify listo!', 'success');
-            });
-
-            player.addListener('not_ready', ({ device_id }) => {
-                console.log('🎵 HITSTER: Reproductor no disponible', device_id);
-            });
-
-            player.addListener('player_state_changed', (state) => {
-                if (!state) return;
-                console.log('🎵 HITSTER: Estado del reproductor:', state);
-            });
-
-            // Conectar el reproductor
-            const success = await player.connect();
-            if (success) {
-                console.log('🎵 HITSTER: Conexión al reproductor exitosa!');
-            }
-        }
-        function displaySong() {
-            if (!currentSong) return;
-
-            document.getElementById('song-title').textContent = currentSong.name;
-            document.getElementById('song-artist').textContent = currentSong.artist;
-            document.getElementById('song-year').textContent = `Año: ????`;
-            document.getElementById('song-info').style.display = 'block';
-
-            // Configurar reproductor
+            // Si hay un preview URL, usar audio nativo
             if (currentSong.preview_url) {
                 audioPlayer.src = currentSong.preview_url;
                 audioPlayer.style.display = 'block';
-                showStatus('scan-status', '🎵 Canción cargada. Preview disponible!', 'success');
-            } else {
-                audioPlayer.style.display = 'none';
-                showStatus('scan-status', '⚠️ Esta canción no tiene preview. Usa "Abrir en Spotify"', 'error');
-            }
-        }
-
-        // Controles del reproductor
-        function playPreview() {
-            if (audioPlayer.src && currentSong.preview_url) {
-                audioPlayer.play().catch(e => {
-                    showStatus('scan-status', 'Error reproduciendo: ' + e.message, 'error');
+                audioPlayer.play().then(() => {
+                    showStatus('scan-status', '🎵 Reproduciendo preview de la canción', 'success');
+                }).catch(error => {
+                    showStatus('scan-status', 'Error al reproducir: ' + error.message, 'error');
                 });
+                return;
+            }
+
+            // Fallback para cuando no hay preview
+            if (currentSong.external_url) {
+                // Abrir en una nueva pestaña
+                window.open(currentSong.external_url, '_blank');
+                showStatus('scan-status', '🎵 Abriendo canción en Spotify', 'success');
             } else {
-                showStatus('scan-status', 'No hay preview disponible. Prueba "Abrir en Spotify"', 'error');
+                showStatus('scan-status', 'No se puede reproducir la canción', 'error');
             }
         }
 
-        function pausePreview() {
-            if (audioPlayer.src) {
+        // Pausar reproducción
+        function pausePlayback() {
+            if (audioPlayer && !audioPlayer.paused) {
+                audioPlayer.pause();
+                showStatus('scan-status', '⏸️ Reproducción pausada', 'success');
+            }
+        }
+
+        // Detener y revelar información
+        function stopAndReveal() {
+            // Pausar reproducción
+            if (audioPlayer) {
                 audioPlayer.pause();
             }
+
+            // Revelar año de la canción
+            revealInfo();
         }
 
-        function openInSpotify() {
-            if (currentSong && currentSong.external_url) {
-                window.open(currentSong.external_url, '_blank');
-            } else {
-                showStatus('scan-status', 'No se puede abrir en Spotify', 'error');
-            }
-        }
-
-        // Buscar canciones populares (intentar API real primero)
-        async function searchPopularSongs() {
-            if (!accessToken) {
-                showStatus('scan-status', 'Primero conecta con Spotify', 'error');
-                return;
-            }
-
-            console.log('🎵 HITSTER: Buscando éxitos populares...');
-
-            // Intentar usar API real si disponible
-            if (!accessToken.startsWith('MOCK_TOKEN_')) {
-                try {
-                    const queries = ['top hits 2023', 'classic rock', 'pop hits', '90s hits', '2000s hits'];
-                    const randomQuery = queries[Math.floor(Math.random() * queries.length)];
-                    
-                    const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(randomQuery)}&type=track&limit=20`, {
-                        headers: {
-                            'Authorization': `Bearer ${accessToken}`
-                        }
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        const tracks = data.tracks.items;
-                        
-                        if (tracks.length > 0) {
-                            const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
-                            console.log('🎵 HITSTER: Encontrada canción real desde API');
-                            await loadSong(randomTrack.id);
-                            return;
-                        }
-                    }
-                } catch (apiError) {
-                    console.log('🎵 HITSTER: Error con búsqueda real, usando fallback');
-                }
-            }
-
-            // Fallback: usar lista expandida de canciones conocidas
-            console.log('🎵 HITSTER: Usando canciones de ejemplo');
-            const popularSongs = [
-                '4iV5W9uYEdYUVa79Axb7Rh', // Never Gonna Give You Up
-                '5ChkMS8OtdzJeqyybCc9R5', // I Want It That Way
-                '2WfaOiMkCvy7F5fcp2zZ8L', // Smells Like Teen Spirit
-                '0VjIjW4GlULA7lCHaCAOvk', // Mr. Brightside
-                '6DCZcSspjsKoFjzjrWoCdn'  // Don't Stop Believin'
-            ];
-
-            const randomId = popularSongs[Math.floor(Math.random() * popularSongs.length)];
-            await loadSong(randomId);
-        }
-
-        // Agregar canción al timeline
-        function addToTimeline() {
-            if (!currentSong) {
-                alert('Primero carga una canción');
-                return;
-            }
-
-            // Verificar si ya está en el timeline
-            if (timeline.find(song => song.id === currentSong.id)) {
-                alert('Esta canción ya está en tu timeline');
-                return;
-            }
-
-            timeline.push({...currentSong});
-            updateTimelineDisplay();
-        }
-
-        // Actualizar visualización del timeline
-        function updateTimelineDisplay() {
-            const timelineDiv = document.getElementById('timeline');
-            
-            if (timeline.length === 0) {
-                timelineDiv.innerHTML = '<p style="text-align: center; opacity: 0.7;">Tu timeline aparecerá aquí conforme agregues canciones</p>';
-                return;
-            }
-
-            timelineDiv.innerHTML = timeline.map((song, index) => `
-                <div class="timeline-item">
-                    <strong>${song.name}</strong> - ${song.artist} (${song.year})
-                    <button class="control-btn" onclick="removeSong(${index})" style="float: right;">❌</button>
-                </div>
-            `).join('');
-        }
-
-        // Remover canción del timeline
-        function removeSong(index) {
-            timeline.splice(index, 1);
-            updateTimelineDisplay();
-        }
-
-        // Limpiar timeline
-        function clearTimeline() {
-            if (confirm('¿Estás seguro de que quieres limpiar tu timeline?')) {
-                timeline = [];
-                updateTimelineDisplay();
-            }
-        }
-
-        // Ordenar timeline por año
-        function sortTimeline() {
-            timeline.sort((a, b) => a.year - b.year);
-            updateTimelineDisplay();
-        }
-
-        // Mostrar estado
-        function showStatus(elementId, message, type) {
-            const statusDiv = document.getElementById(elementId);
-            if (!statusDiv) return;
-            
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
-            statusDiv.classList.remove('hidden');
-            
-            setTimeout(() => {
-                statusDiv.classList.add('hidden');
-            }, 5000);
-        }
+        // Resto del código anterior sigue igual...
+        // (el resto del script anterior se mantiene sin cambios)
 
         // Inicializar cuando carga la página
         window.addEventListener('load', function() {
             console.log('🎵 HITSTER: Página cargada');
+            audioPlayer = document.getElementById('audio-player');
             setTimeout(initApp, 100);
         });
 
@@ -799,6 +378,7 @@
         setTimeout(() => {
             if (!audioPlayer) {
                 console.log('🎵 HITSTER: Inicialización de respaldo');
+                audioPlayer = document.getElementById('audio-player');
                 initApp();
             }
         }, 1000);
