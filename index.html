@@ -560,13 +560,53 @@
                         year: 1981,
                         preview_url: null,
                         external_url: 'https://open.spotify.com/track/6DCZcSspjsKoFjzjrWoCdn'
+                    },
+                    '1Je1IMUlBXcx1Fz0WE7oPT': {
+                        id: '1Je1IMUlBXcx1Fz0WE7oPT',
+                        name: 'Bohemian Rhapsody',
+                        artist: 'Queen',
+                        year: 1975,
+                        preview_url: null,
+                        external_url: 'https://open.spotify.com/track/1Je1IMUlBXcx1Fz0WE7oPT'
+                    },
+                    '2tkcwZ8qVTIHCNN3fTqPdU': {
+                        id: '2tkcwZ8qVTIHCNN3fTqPdU',
+                        name: 'Shape of You',
+                        artist: 'Ed Sheeran',
+                        year: 2017,
+                        preview_url: null,
+                        external_url: 'https://open.spotify.com/track/2tkcwZ8qVTIHCNN3fTqPdU'
+                    },
+                    '0tgVpDi06FyKpA1z0VMD4v': {
+                        id: '0tgVpDi06FyKpA1z0VMD4v',
+                        name: 'Perfect',
+                        artist: 'Ed Sheeran',
+                        year: 2017,
+                        preview_url: null,
+                        external_url: 'https://open.spotify.com/track/0tgVpDi06FyKpA1z0VMD4v'
+                    },
+                    '7qiZfU4dY1lWllzX7mPBI3': {
+                        id: '7qiZfU4dY1lWllzX7mPBI3',
+                        name: 'Shake It Off',
+                        artist: 'Taylor Swift',
+                        year: 2014,
+                        preview_url: null,
+                        external_url: 'https://open.spotify.com/track/7qiZfU4dY1lWllzX7mPBI3'
+                    },
+                    '1mea3bSkSGXuIRvnydlB5b': {
+                        id: '1mea3bSkSGXuIRvnydlB5b',
+                        name: 'Uptown Funk',
+                        artist: 'Mark Ronson ft. Bruno Mars',
+                        year: 2014,
+                        preview_url: null,
+                        external_url: 'https://open.spotify.com/track/1mea3bSkSGXuIRvnydlB5b'
                     }
                 };
 
                 currentSong = mockSongs[trackId] || {
                     id: trackId,
                     name: 'Canción Desconocida',
-                    artist: 'Artista Desconocido',
+                    artist: 'Artista Desconocida',
                     year: 2020,
                     preview_url: null,
                     external_url: `https://open.spotify.com/track/${trackId}`
@@ -590,13 +630,20 @@
                 return;
             }
 
-            // Lista de IDs de canciones populares
+            showStatus('scan-status', '🎲 Buscando canción misteriosa...', 'success');
+
+            // Lista expandida de IDs de canciones populares
             const demoSongs = [
                 '4iV5W9uYEdYUVa79Axb7Rh', // Never Gonna Give You Up
                 '5ChkMS8OtdzJeqyybCc9R5', // I Want It That Way
                 '2WfaOiMkCvy7F5fcp2zZ8L', // Smells Like Teen Spirit
                 '0VjIjW4GlULA7lCHaCAOvk', // Mr. Brightside
-                '6DCZcSspjsKoFjzjrWoCdn'  // Don't Stop Believin'
+                '6DCZcSspjsKoFjzjrWoCdn', // Don't Stop Believin'
+                '1Je1IMUlBXcx1Fz0WE7oPT', // Bohemian Rhapsody - Queen
+                '2tkcwZ8qVTIHCNN3fTqPdU', // Shape of You - Ed Sheeran
+                '0tgVpDi06FyKpA1z0VMD4v', // Perfect - Ed Sheeran
+                '7qiZfU4dY1lWllzX7mPBI3', // Shake It Off - Taylor Swift
+                '1mea3bSkSGXuIRvnydlB5b'  // Uptown Funk - Mark Ronson ft. Bruno Mars
             ];
 
             const randomId = demoSongs[Math.floor(Math.random() * demoSongs.length)];
@@ -669,9 +716,13 @@
         function displaySong() {
             if (!currentSong) return;
 
-            // Resetear información visual
+            // Resetear información visual - NO mostrar nombre ni artista
             songRevealed = false;
-            document.getElementById('song-title').textContent = `🎵 ${currentSong.name}`;
+            document.getElementById('song-title').textContent = `🎵 Canción Misteriosa`;
+            document.getElementById('song-artist').textContent = `Artista: ???`;
+            document.getElementById('song-year').textContent = `Año: ????`;
+            
+            // Ocultar toda la información real
             document.getElementById('song-artist').style.display = 'none';
             document.getElementById('song-year').style.display = 'none';
             document.getElementById('mystery-info').style.display = 'block';
@@ -688,130 +739,9 @@
             // Preparar preview si está disponible
             if (currentSong.preview_url) {
                 audioPlayer.src = currentSong.preview_url;
-                showStatus('scan-status', '🎵 Canción cargada. ¡Presiona "Iniciar Reproducción"!', 'success');
+                showStatus('scan-status', '🎵 Canción misteriosa cargada. ¡Presiona "Iniciar Reproducción" y adivina!', 'success');
             } else {
-                showStatus('scan-status', '🎵 Canción cargada. Se usará reproductor de Spotify.', 'success');
-            }
-        }
-
-        // Iniciar reproducción en la página
-        function startPlayback() {
-            if (!currentSong) {
-                showStatus('scan-status', 'Primero carga una canción', 'error');
-                return;
-            }
-
-            console.log('🎵 HITSTER: Iniciando reproducción en la página...');
-
-            const spotifyPlayerDiv = document.getElementById('spotify-player');
-            const spotifyIframe = document.getElementById('spotify-iframe');
-            const audioPlayer = document.getElementById('audio-player');
-
-            // Prioridad 1: Si hay preview URL, usar reproductor HTML5
-            if (currentSong.preview_url) {
-                console.log('🎵 HITSTER: Reproduciendo preview con HTML5...');
-                audioPlayer.src = currentSong.preview_url;
-                audioPlayer.style.display = 'block';
-                audioPlayer.currentTime = 0;
-                
-                audioPlayer.play().then(() => {
-                    showStatus('scan-status', '🎵 Reproduciendo preview (30 segundos)', 'success');
-                    // Ocultar reproductor de Spotify si estaba visible
-                    spotifyPlayerDiv.style.display = 'none';
-                }).catch(error => {
-                    console.error('Error reproduciendo audio:', error);
-                    showStatus('scan-status', 'Error al reproducir preview. Probando Spotify embebido...', 'error');
-                    // Si falla el preview, intentar con Spotify embebido
-                    trySpotifyEmbed();
-                });
-                return;
-            }
-
-            // Prioridad 2: Usar reproductor embebido de Spotify
-            trySpotifyEmbed();
-        }
-
-        function trySpotifyEmbed() {
-            if (!currentSong) return;
-            
-            console.log('🎵 HITSTER: Intentando reproductor embebido de Spotify...');
-            
-            const spotifyPlayerDiv = document.getElementById('spotify-player');
-            const spotifyIframe = document.getElementById('spotify-iframe');
-            const audioPlayer = document.getElementById('audio-player');
-            
-            // Crear URL del embed de Spotify
-            const embedUrl = `https://open.spotify.com/embed/track/${currentSong.id}?utm_source=generator&theme=0`;
-            
-            // Configurar iframe
-            spotifyIframe.src = embedUrl;
-            spotifyPlayerDiv.style.display = 'block';
-            audioPlayer.style.display = 'none';
-            
-            showStatus('scan-status', '🎵 Reproductor de Spotify cargado. ¡Dale play!', 'success');
-            
-            // Scroll hacia el reproductor para que sea visible
-            spotifyPlayerDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        // Buscar canciones populares (intentar API real primero)
-        async function searchPopularSongs() {
-            if (!accessToken) {
-                showStatus('scan-status', 'Primero conecta con Spotify', 'error');
-                return;
-            }
-
-            console.log('🎵 HITSTER: Buscando éxitos populares...');
-
-            // Intentar usar API real si disponible
-            if (!accessToken.startsWith('MOCK_TOKEN_')) {
-                try {
-                    const queries = ['top hits 2023', 'classic rock', 'pop hits', '90s hits', '2000s hits'];
-                    const randomQuery = queries[Math.floor(Math.random() * queries.length)];
-                    
-                    const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(randomQuery)}&type=track&limit=20`, {
-                        headers: {
-                            'Authorization': `Bearer ${accessToken}`
-                        }
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        const tracks = data.tracks.items;
-                        
-                        if (tracks.length > 0) {
-                            const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
-                            console.log('🎵 HITSTER: Encontrada canción real desde API');
-                            await loadSong(randomTrack.id);
-                            return;
-                        }
-                    }
-                } catch (apiError) {
-                    console.log('🎵 HITSTER: Error con búsqueda real, usando fallback');
-                }
-            }
-
-            // Fallback: usar lista expandida de canciones conocidas
-            console.log('🎵 HITSTER: Usando canciones de ejemplo');
-            const popularSongs = [
-                '4iV5W9uYEdYUVa79Axb7Rh', // Never Gonna Give You Up
-                '5ChkMS8OtdzJeqyybCc9R5', // I Want It That Way
-                '2WfaOiMkCvy7F5fcp2zZ8L', // Smells Like Teen Spirit
-                '0VjIjW4GlULA7lCHaCAOvk', // Mr. Brightside
-                '6DCZcSspjsKoFjzjrWoCdn'  // Don't Stop Believin'
-            ];
-
-            const randomId = popularSongs[Math.floor(Math.random() * popularSongs.length)];
-            await loadSong(randomId);
-        }
-
-        // Abrir canción en Spotify
-        function openInSpotify() {
-            if (currentSong && currentSong.external_url) {
-                window.open(currentSong.external_url, '_blank');
-                showStatus('scan-status', '🎵 Abriendo en Spotify...', 'success');
-            } else {
-                showStatus('scan-status', 'No se puede abrir en Spotify', 'error');
+                showStatus('scan-status', '🎵 Canción misteriosa cargada. Se usará reproductor de Spotify.', 'success');
             }
         }
 
@@ -825,9 +755,11 @@
             songRevealed = true;
             
             // Mostrar toda la información real
-            document.getElementById('song-title').textContent = `Canción: ${currentSong.name}`;
+            document.getElementById('song-title').textContent = `🎵 ${currentSong.name}`;
             document.getElementById('song-artist').textContent = `Artista: ${currentSong.artist}`;
+            document.getElementById('song-artist').style.display = 'block';
             document.getElementById('song-year').textContent = `Año: ${currentSong.year}`;
+            document.getElementById('song-year').style.display = 'block';
             document.getElementById('mystery-info').style.display = 'none';
 
             // Pausar si está reproduciendo
