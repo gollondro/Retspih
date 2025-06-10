@@ -736,6 +736,12 @@
             audioPlayer.style.display = 'none';
             spotifyPlayerDiv.style.display = 'none';
             
+            // Configurar Spotify iframe si está disponible
+            const spotifyIframe = document.getElementById('spotify-iframe');
+            if (currentSong.external_url) {
+                spotifyIframe.src = `https://open.spotify.com/embed/track/${currentSong.id}`;
+            }
+            
             // Preparar preview si está disponible
             if (currentSong.preview_url) {
                 audioPlayer.src = currentSong.preview_url;
@@ -875,6 +881,107 @@
                 });
             }
         }
+        // También necesitamos agregar la función startPlayback() que faltaba
+function startPlayback() {
+    if (!currentSong) {
+        showStatus('scan-status', 'Primero carga una canción', 'error');
+        return;
+    }
+
+    console.log('🎵 HITSTER: Iniciando reproducción en la página...');
+
+    const spotifyPlayerDiv = document.getElementById('spotify-player');
+    const spotifyIframe = document.getElementById('spotify-iframe');
+    const audioPlayer = document.getElementById('audio-player');
+
+    // Prioridad 1: Si hay preview URL, usar reproductor HTML5
+    if (currentSong.preview_url) {
+        console.log('🎵 HITSTER: Reproduciendo preview con HTML5...');
+        audioPlayer.src = currentSong.preview_url;
+        audioPlayer.style.display = 'block';
+        audioPlayer.currentTime = 0;
+        
+        audioPlayer.play().then(() => {
+            showStatus('scan-status', '🎵 Reproduciendo preview (30 segundos)', 'success');
+            // Ocultar reproductor de Spotify si estaba visible
+            spotifyPlayerDiv.style.display = 'none';
+        }).catch(error => {
+            console.error('Error reproduciendo audio:', error);
+            showStatus('scan-status', 'Error al reproducir preview. Probando Spotify embebido...', 'error');
+            // Si falla el preview, intentar con Spotify embebido
+            trySpotifyEmbed();
+        });
+        return;
+    }
+
+    // Prioridad 2: Usar reproductor embebido de Spotify
+    trySpotifyEmbed();
+}
+
+function trySpotifyEmbed() {
+    if (!currentSong) return;
+    
+    console.log('🎵 HITSTER: Intentando reproductor embebido de Spotify...');
+    
+    const spotifyPlayerDiv = document.getElementById('spotify-player');
+    const spotifyIframe = document.getElementById('spotify-iframe');
+    const audioPlayer = document.getElementById('audio-player');
+    
+    // Crear URL del embed de Spotify
+    const embedUrl = `https://open.spotify.com/embed/track/${currentSong.id}?utm_source=generator&theme=0`;
+    
+    // Configurar iframe
+    spotifyIframe.src = embedUrl;
+    spotifyPlayerDiv.style.display = 'block';
+    audioPlayer.style.display = 'none';
+    
+    showStatus('scan-status', '🎵 Reproductor de Spotify cargado. ¡Dale play!', 'success');
+    
+    // Scroll hacia el reproductor para que sea visible
+    spotifyPlayerDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// También agregar la función openInSpotify() que faltaba
+function openInSpotify() {
+    if (!currentSong) {
+        showStatus('scan-status', 'Primero carga una canción', 'error');
+        return;
+    }
+    
+    if (currentSong.external_url) {
+        window.open(currentSong.external_url, '_blank');
+        showStatus('scan-status', '🎵 Abriendo en Spotify...', 'success');
+    } else {
+        showStatus('scan-status', 'URL de Spotify no disponible', 'error');
+    }
+}
+
+// Agregar función searchPopularSongs() que faltaba
+async function searchPopularSongs() {
+    if (!accessToken) {
+        showStatus('scan-status', 'Primero conecta con Spotify', 'error');
+        return;
+    }
+
+    showStatus('scan-status', '🔥 Buscando éxitos populares...', 'success');
+
+    // Lista de grandes éxitos de diferentes décadas
+    const popularHits = [
+        '4iV5W9uYEdYUVa79Axb7Rh', // Never Gonna Give You Up - Rick Astley (1987)
+        '1Je1IMUlBXcx1Fz0WE7oPT', // Bohemian Rhapsody - Queen (1975)
+        '6DCZcSspjsKoFjzjrWoCdn', // Don't Stop Believin' - Journey (1981)
+        '2WfaOiMkCvy7F5fcp2zZ8L', // Smells Like Teen Spirit - Nirvana (1991)
+        '5ChkMS8OtdzJeqyybCc9R5', // I Want It That Way - Backstreet Boys (1999)
+        '0VjIjW4GlULA7lCHaCAOvk', // Mr. Brightside - The Killers (2003)
+        '1mea3bSkSGXuIRvnydlB5b', // Uptown Funk - Mark Ronson ft. Bruno Mars (2014)
+        '2tkcwZ8qVTIHCNN3fTqPdU', // Shape of You - Ed Sheeran (2017)
+        '7qiZfU4dY1lWllzX7mPBI3', // Shake It Off - Taylor Swift (2014)
+        '0tgVpDi06FyKpA1z0VMD4v'  // Perfect - Ed Sheeran (2017)
+    ];
+
+    const randomHit = popularHits[Math.floor(Math.random() * popularHits.length)];
+    await loadSong(randomHit);
+}
     </script>
 </body>
 </html>
