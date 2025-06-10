@@ -751,137 +751,34 @@
             }
         }
 
-        // Revelar información de la canción
-        function stopAndReveal() {
-            if (!currentSong) {
-                showStatus('scan-status', 'Primero carga una canción', 'error');
-                return;
-            }
-
-            songRevealed = true;
-            
-            // Mostrar toda la información real
-            document.getElementById('song-title').textContent = `🎵 ${currentSong.name}`;
-            document.getElementById('song-artist').textContent = `Artista: ${currentSong.artist}`;
-            document.getElementById('song-artist').style.display = 'block';
-            document.getElementById('song-year').textContent = `Año: ${currentSong.year}`;
-            document.getElementById('song-year').style.display = 'block';
-            document.getElementById('mystery-info').style.display = 'none';
-
-            // Pausar si está reproduciendo
-            pausePlayback();
-
-            showStatus('scan-status', '🔍 ¡Información revelada!', 'success');
-        }
-
-        // Agregar canción al timeline
-        function addToTimeline() {
-            if (!currentSong) {
-                alert('Primero carga una canción');
-                return;
-            }
-
-            if (!songRevealed) {
-                alert('Primero revela la información de la canción');
-                return;
-            }
-
-            // Verificar si ya está en el timeline
-            if (timeline.find(song => song.id === currentSong.id)) {
-                alert('Esta canción ya está en tu timeline');
-                return;
-            }
-
-            timeline.push({...currentSong});
-            updateTimelineDisplay();
-            showStatus('scan-status', '➕ Canción agregada al timeline!', 'success');
-        }
-
-        // Actualizar visualización del timeline
-        function updateTimelineDisplay() {
-            const timelineDiv = document.getElementById('timeline');
-            
-            if (timeline.length === 0) {
-                timelineDiv.innerHTML = '<p style="text-align: center; opacity: 0.7;">Tu timeline aparecerá aquí conforme agregues canciones</p>';
-                return;
-            }
-
-            timelineDiv.innerHTML = timeline.map((song, index) => `
-                <div class="timeline-item">
-                    <strong>${song.name}</strong> - ${song.artist} (${song.year})
-                    <button class="control-btn" onclick="removeSong(${index})" style="float: right;">❌</button>
-                </div>
-            `).join('');
-        }
-
-        // Remover canción del timeline
-        function removeSong(index) {
-            timeline.splice(index, 1);
-            updateTimelineDisplay();
-        }
-
-        // Limpiar timeline
-        function clearTimeline() {
-            if (confirm('¿Estás seguro de que quieres limpiar tu timeline?')) {
-                timeline = [];
-                updateTimelineDisplay();
-            }
-        }
-
-        // Ordenar timeline por año
-        function sortTimeline() {
-            timeline.sort((a, b) => a.year - b.year);
-            updateTimelineDisplay();
-        }
-
-        // Mostrar estado
-        function showStatus(elementId, message, type) {
-            const statusDiv = document.getElementById(elementId);
-            if (!statusDiv) return;
-            
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
-            statusDiv.classList.remove('hidden');
-            
-            setTimeout(() => {
-                statusDiv.classList.add('hidden');
-            }, 5000);
-        }
-
-        // Inicializar cuando carga la página
-        window.addEventListener('load', function() {
-            console.log('🎵 HITSTER: Página cargada');
-            setTimeout(initApp, 100);
+        // También mejoro la función pausePlayback() para manejar el iframe
+function pausePlayback() {
+    const audioPlayer = document.getElementById('audio-player');
+    const spotifyPlayerDiv = document.getElementById('spotify-player');
+    
+    // Pausar audio HTML5
+    if (audioPlayer && !audioPlayer.paused) {
+        audioPlayer.pause();
+        showStatus('scan-status', '⏸️ Reproducción pausada', 'success');
+    }
+    
+    // Para iframe de Spotify, ocultarlo (no hay API directa para pausar)
+    if (spotifyPlayerDiv.style.display === 'block') {
+        spotifyPlayerDiv.style.display = 'none';
+        showStatus('scan-status', '⏸️ Reproductor de Spotify oculto', 'success');
+    }
+    
+    // Para el reproductor de Spotify Web SDK
+    if (window.spotifyPlayer) {
+        window.spotifyPlayer.pause().then(() => {
+            console.log('🎵 HITSTER: Spotify pausado');
+        }).catch(error => {
+            console.log('🎵 HITSTER: Error pausando Spotify:', error);
         });
+    }
+}
 
-        // Backup de inicialización
-        setTimeout(() => {
-            if (!audioPlayer) {
-                console.log('🎵 HITSTER: Inicialización de respaldo');
-                initApp();
-            }
-        }, 1000);
-
-        // Agregar función para pausar todo
-        function pausePlayback() {
-            const audioPlayer = document.getElementById('audio-player');
-            
-            // Pausar audio HTML5
-            if (audioPlayer && !audioPlayer.paused) {
-                audioPlayer.pause();
-                showStatus('scan-status', '⏸️ Reproducción pausada', 'success');
-            }
-            
-            // Para el reproductor de Spotify Web SDK
-            if (window.spotifyPlayer) {
-                window.spotifyPlayer.pause().then(() => {
-                    console.log('🎵 HITSTER: Spotify pausado');
-                }).catch(error => {
-                    console.log('🎵 HITSTER: Error pausando Spotify:', error);
-                });
-            }
-        }
-        // También necesitamos agregar la función startPlayback() que faltaba
+// Mejoro startPlayback() para minimizar información mostrada
 function startPlayback() {
     if (!currentSong) {
         showStatus('scan-status', 'Primero carga una canción', 'error');
@@ -909,33 +806,37 @@ function startPlayback() {
             console.error('Error reproduciendo audio:', error);
             showStatus('scan-status', 'Error al reproducir preview. Probando Spotify embebido...', 'error');
             // Si falla el preview, intentar con Spotify embebido
-            trySpotifyEmbed();
+            configureSpotifyIframe();
         });
         return;
     }
 
     // Prioridad 2: Usar reproductor embebido de Spotify
-    trySpotifyEmbed();
+    configureSpotifyIframe();
 }
 
-function trySpotifyEmbed() {
+// Nueva función para configurar iframe minimalista
+function configureSpotifyIframe() {
     if (!currentSong) return;
     
-    console.log('🎵 HITSTER: Intentando reproductor embebido de Spotify...');
+    console.log('🎵 HITSTER: Configurando reproductor embebido minimalista...');
     
     const spotifyPlayerDiv = document.getElementById('spotify-player');
     const spotifyIframe = document.getElementById('spotify-iframe');
     const audioPlayer = document.getElementById('audio-player');
     
-    // Crear URL del embed de Spotify
-    const embedUrl = `https://open.spotify.com/embed/track/${currentSong.id}?utm_source=generator&theme=0`;
+    // Crear URL del embed de Spotify con parámetros para minimizar información
+    const embedUrl = `https://open.spotify.com/embed/track/${currentSong.id}?utm_source=generator&theme=0&view=coverart&t=0`;
     
-    // Configurar iframe
+    // Configurar iframe con estilo minimalista
     spotifyIframe.src = embedUrl;
+    spotifyIframe.style.height = '152px'; // Altura mínima
+    spotifyIframe.style.borderRadius = '12px';
+    
     spotifyPlayerDiv.style.display = 'block';
     audioPlayer.style.display = 'none';
     
-    showStatus('scan-status', '🎵 Reproductor de Spotify cargado. ¡Dale play!', 'success');
+    showStatus('scan-status', '🎵 Reproductor de Spotify cargado. ¡Dale play y adivina el año!', 'success');
     
     // Scroll hacia el reproductor para que sea visible
     spotifyPlayerDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
